@@ -11,6 +11,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import "NSDataExtensions.h"
+
 // PNG CRC example code
 
 /* Table computed with Mark Adler's makecrc.c utility.  */
@@ -174,7 +176,7 @@ int main(int argc, const char * argv[]) {
     
     // 4 byte CRC checksum at end of chunk
     
-    assert(chunkIHDR.length == 0x0d+4);
+    assert(chunkIHDR.length == (0x0d + 4));
     
     {
       uint32_t crcVal = crc32(0, (unsigned char *)chunkIHDR.bytes, (int)chunkIHDR.length);
@@ -202,11 +204,11 @@ int main(int argc, const char * argv[]) {
       [chunkIDAT appendBytes:pngHeader length:sizeof(pngHeader)];
     }
     
-    // FIXME: write with zlib header
+    // zlib header : a pair of 4 bit values
     
-    // The original file data as bytes
+    NSData *zlibCompressed = [inBinData zlibDeflate];
     
-    [chunkIDAT appendData:inBinData];
+    [chunkIDAT appendData:zlibCompressed];
     
     // 4 byte CRC checksum at end of chunk
     
