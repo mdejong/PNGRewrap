@@ -197,16 +197,27 @@ int main(int argc, const char * argv[]) {
       [chunkIDAT appendBytes:pngHeader length:sizeof(pngHeader)];
     }
     
+    NSMutableData *rowData = [NSMutableData data];
+    
+    {
+      uint8_t zeroByte = 0x0; // no filtering
+      [rowData appendBytes:&zeroByte length:1];
+    }
+    
+    [rowData appendData:inBinData];
+
+    // PNG row layout includes a row filter byte at that start of
+    // each row. This emitting layout uses only one row so emit
+    // a single zero values byte to indicate that no filtering
+    // is used.
+    
     // zlib header : a pair of 4 bit values
     
-    NSData *zlibCompressed = [inBinData zlibDeflate];
+    NSData *zlibCompressed = [rowData zlibDeflate];
     
     [chunkIDAT appendData:zlibCompressed];
     
-    // Output of pngcrush for test pattern
-    // IDAT 08 1d 01 05 00 fa ff 00 01 02 03 04 00 19 00 0b 67 41 66 59
-    
-    if (1) {
+    if ((0)) {
       printf("zlibCompressed num bytes %d\n", (int)zlibCompressed.length);
       
       for ( int i = 0;  i < zlibCompressed.length; i++ ) {
@@ -215,7 +226,7 @@ int main(int argc, const char * argv[]) {
       }
     }
 
-    if (1) {
+    if ((0)) {
       uint8_t bVal = ((uint8_t*) zlibCompressed.bytes)[0];
       uint8_t low = bVal & 0x0F;
       uint8_t high = (bVal >> 4) & 0x0F;
