@@ -109,6 +109,13 @@ int main(int argc, const char * argv[]) {
       exit(2);
     }
     
+    // A really really large file cannot be represented by a 4 byte size value
+    
+    if ((inBinData.length+1) >= 0xFFFFFFFF) {
+      printf("input data file size is too large\n");
+      exit(3);
+    }
+    
     // PNG Header
     
     // Hex   :   89  50  4e  47  0d  0a  1a   0a
@@ -140,8 +147,8 @@ int main(int argc, const char * argv[]) {
     }
     
     // IHDR chunk
-    // Width:              4 bytes
-    // Height:             4 bytes
+    // Image Width:        4 bytes
+    // Image Height:       4 bytes
     // Bit depth:          1 byte
     // Color type:         1 byte
     // Compression method: 1 byte
@@ -241,6 +248,12 @@ int main(int argc, const char * argv[]) {
     
     {
       uint32_t numBytes = (int) chunkIDAT.length - 4;
+      
+      if ((chunkIDAT.length - 4) >= 0xFFFFFFFF) {
+        printf("compressed data size is too large for IDAT\n");
+        exit(3);
+      }
+      
       [pngBytes appendData:formatInt(numBytes)];
     }
     

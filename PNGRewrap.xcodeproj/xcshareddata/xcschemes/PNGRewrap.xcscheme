@@ -64,11 +64,11 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "test.bin"
+            argument = "one@3x.png2"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "test_rewrapped.png"
+            argument = "one@3x.png"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
