@@ -188,14 +188,7 @@ int main(int argc, const char * argv[]) {
     
     NSMutableData *chunkIDAT = [NSMutableData data];
     
-    // IDAT
-    // 4 byte size of IDAT : ? ? ? ?
-    // IDAT : 0x49 0x44 0x41 0x54
-    
-    {
-      uint32_t numBytes = inBinDataNumBytes;
-      [pngBytes appendData:formatInt(numBytes)];
-    }
+    // IDAT - 4 byte size and then IDAT 0x49 0x44 0x41 0x54
     
     // Note that CRC is computed so that chunk name is included
     
@@ -210,15 +203,47 @@ int main(int argc, const char * argv[]) {
     
     [chunkIDAT appendData:zlibCompressed];
     
+    // Output of pngcrush for test pattern
+    // IDAT 08 1d 01 05 00 fa ff 00 01 02 03 04 00 19 00 0b 67 41 66 59
+    
+    if (1) {
+      printf("zlibCompressed num bytes %d\n", (int)zlibCompressed.length);
+      
+      for ( int i = 0;  i < zlibCompressed.length; i++ ) {
+        uint8_t bVal = ((uint8_t*) zlibCompressed.bytes)[i];
+        printf("bVal [%3d] 0x%X = %d\n", i, bVal, bVal);
+      }
+    }
+
+    if (1) {
+      uint8_t bVal = ((uint8_t*) zlibCompressed.bytes)[0];
+      uint8_t low = bVal & 0x0F;
+      uint8_t high = (bVal >> 4) & 0x0F;
+      NSLog(@"bVal 0x%X = low %d high %d nibbles", bVal, low, high);
+    }
+    
+    // Write IDAT chunk size as 4 bytes, note that the chunk
+    // size is not available until after the compression
+    // phase is complete. Also note that the CRC checksum
+    // is not included in this size and that the 4 chunk
+    // bytes are not included in the length total.
+    
+    {
+      uint32_t numBytes = (int) chunkIDAT.length - 4;
+      [pngBytes appendData:formatInt(numBytes)];
+    }
+    
     // 4 byte CRC checksum at end of chunk
     
     {
       uint32_t crcVal = crc32(0, (unsigned char *)chunkIDAT.bytes, (int)chunkIDAT.length);
       
       [chunkIDAT appendData:formatInt(crcVal)];
-      
-      [pngBytes appendData:chunkIDAT];
     }
+    
+    [pngBytes appendData:chunkIDAT];
+
+    // IEND
     
     NSMutableData *chunkIEND = [NSMutableData data];
     
@@ -227,7 +252,7 @@ int main(int argc, const char * argv[]) {
     // 4 byte IEND bytes : 0x49 0x45 0x4e 0x44
     
     {
-      uint8_t pngHeader[] = { 0x00, 0x00, 0x00, 0x0d };
+      uint8_t pngHeader[] = { 0x00, 0x00, 0x00, 0x00 };
       [pngBytes appendBytes:pngHeader length:sizeof(pngHeader)];
     }
     
