@@ -11,6 +11,8 @@
 
 #import <Foundation/Foundation.h>
 
+#import "CGFrameBuffer.h"
+
 // PNG CRC example code
 
 /* Table computed with Mark Adler's makecrc.c utility.  */
@@ -86,18 +88,35 @@ crc32(uint32_t crc, unsigned char *buf, int len)
 
 void calcWidthAndHeight(int numBytes, int *widthPtr, int *heightPtr) {
   const int widthMAX = 16384;
+  int widthMAXPixels = (widthMAX / 3);
+  if ((widthMAX % 3) > 0) {
+    widthMAXPixels++;
+  }
   
-  if (numBytes <= widthMAX) {
-    *widthPtr = numBytes;
+  int numPixelsNeeded = numBytes / 3;
+  if ((numBytes % 3) != 0) {
+    numPixelsNeeded++;
+  }
+  
+  if ((numPixelsNeeded % 2) != 0) {
+    // Width is always an even number of pixels
+    numPixelsNeeded++;
+  }
+  
+  // FIXME: output should group sets of 3 bytes into 24 BPP pixels, so the
+  // width of the output should handle 3x more?
+  
+  if (numBytes <= widthMAXPixels) {
+    *widthPtr = numPixelsNeeded;
     *heightPtr = 1;
     return;
   } else {
-    int n = numBytes / widthMAX;
-    if ((numBytes % widthMAX) != 0) {
+    int n = numPixelsNeeded / widthMAXPixels;
+    if ((numPixelsNeeded % widthMAXPixels) != 0) {
       n++;
     }
     
-    *widthPtr = widthMAX;
+    *widthPtr = widthMAXPixels;
     *heightPtr = n;
     return;
   }
@@ -108,31 +127,59 @@ void calcWidthAndHeight(int numBytes, int *widthPtr, int *heightPtr) {
 
 NSData* renderDataAsPNG(NSData *inData, int bitmapWidth, int bitmapHeight)
 {
-  int len = (int) inData.length;
+  int byteLen = (int) inData.length;
   
-  int bitmapLength = bitmapWidth * bitmapHeight;
-
-  //CGRect imageRect = CGRectMake(0, 0, bitmapWidth, bitmapHeight);
-
-  // Grayscale color space
-  CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
-
-  // Create bitmap content with current image size and grayscale colorspace
-  CGContextRef context = CGBitmapContextCreate(nil, bitmapWidth, bitmapHeight, 8, bitmapWidth, colorSpace, kCGImageAlphaNone);
+  int bitmapLength = (int) (bitmapWidth * bitmapHeight);
   
-  assert(CGBitmapContextGetBytesPerRow(context) == bitmapWidth);
-
-  // Copy input data into context buffer
+  //assert(bitmapLength >= byteLen);
   
-  uint8_t *contextPtr = (uint8_t *) CGBitmapContextGetData(context);
-  assert(contextPtr != NULL);
-  assert(len <= bitmapLength);
+  CGFrameBuffer *fb = [CGFrameBuffer cGFrameBufferWithBppDimensions:24 width:bitmapWidth height:bitmapHeight];
   
-  memset(contextPtr, 0, bitmapLength);
-  memcpy(contextPtr, inData.bytes, len);
+  // Each 24 bit RGB pixel will contain 3 bytes, so break input up into triples and zero fill.
+  
+  int numPixels = byteLen / 3;
+  int numBytesOver = (byteLen % 3);
+  
+  int totalNumPixels = numPixels;
+  if (numBytesOver > 0) {
+    totalNumPixels += 1;
+  }
+  if ((totalNumPixels % 2) != 0) {
+    totalNumPixels += 1;
+  }
+  //assert(totalNumPixels == bitmapLength);
+  assert(totalNumPixels <= bitmapLength);
+  
+  uint8_t *inBytePtr = (uint8_t *) inData.bytes;
+  uint32_t *outPixelPtr = (uint32_t *) fb.pixels;
+  
+  for (int i = 0; i < numPixels; i++) {
+    uint32_t B = *inBytePtr++;
+    uint32_t G = *inBytePtr++;
+    uint32_t R = *inBytePtr++;
+    
+    uint32_t pixel = (R << 16) | (G << 8) | (B);
+    
+    *outPixelPtr++ = pixel;
+  }
+  
+  // Emit 1 or 2 more bytes (zero padded)
+  
+  if (numBytesOver == 1) {
+    uint32_t B = *inBytePtr++;
+    uint32_t pixel = B;
+    *outPixelPtr++ = pixel;
+  } else if (numBytesOver == 2) {
+    uint32_t B = *inBytePtr++;
+    uint32_t G = *inBytePtr++;
+    uint32_t pixel = (G << 8) | (B);
+    *outPixelPtr++ = pixel;
+  }
+  
+  // FIXME: trailing size as 16 bit value to indicate how many zeros?
   
   // Create bitmap image info from pixel data in current context
-  CGImageRef imageRef = CGBitmapContextCreateImage(context);
+  CGImageRef imageRef = [fb createCGImageRef];
   
   // Generate PNG from CGImageRef
   
