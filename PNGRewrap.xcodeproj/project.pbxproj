@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		3CD2955522A34C9F00FC6820 /* CGFrameBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CD2955322A34C9F00FC6820 /* CGFrameBuffer.m */; };
+		3CD2955822A37D4500FC6820 /* EPNGDecoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CD2955722A37D4500FC6820 /* EPNGDecoder.m */; };
 		3CEA56F52298688400164F1C /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 3CEA56F42298688400164F1C /* main.m */; };
 /* End PBXBuildFile section */
 
@@ -26,6 +27,8 @@
 /* Begin PBXFileReference section */
 		3CD2955322A34C9F00FC6820 /* CGFrameBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CGFrameBuffer.m; sourceTree = "<group>"; };
 		3CD2955422A34C9F00FC6820 /* CGFrameBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CGFrameBuffer.h; sourceTree = "<group>"; };
+		3CD2955622A37D4500FC6820 /* EPNGDecoder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EPNGDecoder.h; sourceTree = "<group>"; };
+		3CD2955722A37D4500FC6820 /* EPNGDecoder.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = EPNGDecoder.m; sourceTree = "<group>"; };
 		3CEA56F12298688400164F1C /* pngrewrap */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pngrewrap; sourceTree = BUILT_PRODUCTS_DIR; };
 		3CEA56F42298688400164F1C /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -60,6 +63,8 @@
 		3CEA56F32298688400164F1C /* PNGRewrap */ = {
 			isa = PBXGroup;
 			children = (
+				3CD2955622A37D4500FC6820 /* EPNGDecoder.h */,
+				3CD2955722A37D4500FC6820 /* EPNGDecoder.m */,
 				3CEA56F42298688400164F1C /* main.m */,
 				3CD2955422A34C9F00FC6820 /* CGFrameBuffer.h */,
 				3CD2955322A34C9F00FC6820 /* CGFrameBuffer.m */,
@@ -125,6 +130,7 @@
 			files = (
 				3CEA56F52298688400164F1C /* main.m in Sources */,
 				3CD2955522A34C9F00FC6820 /* CGFrameBuffer.m in Sources */,
+				3CD2955822A37D4500FC6820 /* EPNGDecoder.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
