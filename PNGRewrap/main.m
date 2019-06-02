@@ -3,7 +3,7 @@
 //  PNGRewrap
 //
 //  Created by Mo DeJong on 5/24/19.
-//  Copyright © 2019 HelpURock. All rights reserved.
+//  See LICENSE for license terms.
 //
 //  pngrewrap infile output.png
 //
@@ -168,13 +168,12 @@ int main(int argc, const char * argv[]) {
       printf("input data file size is too large\n");
       exit(3);
     }
-
-    if ((1))
-    {
-      // Print CRC of input data
-      
-      uint32_t crcVal = (uint32_t) crc32(0L, (unsigned char *)inBinData.bytes, (int)inBinData.length);
-      printf("input  CRC 0x%08X based on %d input bytes\n", crcVal, (int)inBinData.length);
+    
+    // CRC for input data
+    
+    uint32_t inputCRC = (uint32_t) crc32(0L, (unsigned char *)inBinData.bytes, (int)inBinData.length);
+    if (1) {
+    printf("input  CRC 0x%08X based on %d input bytes\n", inputCRC, (int)inBinData.length);
     }
     
     if (0) {
@@ -217,11 +216,17 @@ int main(int argc, const char * argv[]) {
       
       NSString *pathPrefix = @"fileXXXXXX.bin";
       NSString *curDir = [[[NSFileManager alloc] init] currentDirectoryPath];
-      NSURL *url = [EPNGDecoder saveEmbeddedAssetToTmpDir:pngImgRef pathPrefix:pathPrefix tmpDir:curDir];
+      int decodeCRC = 0;
+      NSURL *url = [EPNGDecoder saveEmbeddedAssetToTmpDir:pngImgRef pathPrefix:pathPrefix tmpDir:curDir decodeCRC:&decodeCRC];
       
       if (url == NULL){
         fprintf(stderr, "Could not parse embedded data buffer from PNG");
         exit(2);;
+      }
+      
+      if (inputCRC != decodeCRC){
+        fprintf(stderr, "Decode CRC did not match input CRC : input != decode : %0x08X != %0x08X", inputCRC, decodeCRC);
+        exit(3);;
       }
       
       NSString *path = [url path];

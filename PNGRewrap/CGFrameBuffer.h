@@ -3,7 +3,7 @@
 //
 //  Created by Moses DeJong on 2/13/09.
 //
-//  See license.txt for license terms.
+//  See LICENSE for license terms.
 
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>

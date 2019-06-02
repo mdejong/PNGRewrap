@@ -2,7 +2,7 @@
 //  EPNGDecoder.m
 //
 //  Created by Mo DeJong on 6/1/19.
-//  Copyright © 2019 HelpURock. All rights reserved.
+//  See LICENSE for license terms.
 //
 
 #import "EPNGDecoder.h"
@@ -19,11 +19,16 @@
   return obj;
 }
 
-// FIXME: pass in tmp dir ?
+// Return unique file path in temp dir, pass in a template like
+// @"videoXXXXXX.m4v" to define the path name tempalte. If
+// tmpDir is nil then NSTemporaryDirectory() is used.
+// If decodeCRC is not NULL then a CRC is calculated on
+// the decoded buffer.
 
 + (NSURL*) saveEmbeddedAssetToTmpDir:(CGImageRef)cgImage
                           pathPrefix:(NSString*)pathPrefix
                               tmpDir:(NSString*)tmpDir
+                           decodeCRC:(int*)decodeCRC
 {
   int bitmapWidth = (int) CGImageGetWidth(cgImage);
   int bitmapHeight = (int) CGImageGetHeight(cgImage);
@@ -136,12 +141,16 @@
     }
   }
   
-  // Signature of decoded PNG data
+  // Signature of decoded PNG data (optional)
   
-  if ((1)) {
+  if (decodeCRC != NULL) {
     uint32_t crc = (uint32_t) crc32(0, (void*)rawBytes.bytes, (int)rawBytes.length);
     
-    printf("decode CRC 0x%08X based on %d input buffer bytes\n", crc, (int)rawBytes.length);
+    if ((1)) {
+      printf("decode CRC 0x%08X based on %d input buffer bytes\n", crc, (int)rawBytes.length);
+    }
+    
+    *decodeCRC = crc;
   }
   
   // FIXME: optimize by creating NSData with no copy flag, then write,
