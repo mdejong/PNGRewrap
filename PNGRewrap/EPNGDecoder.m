@@ -30,6 +30,10 @@
                               tmpDir:(NSString*)tmpDir
                            decodeCRC:(int*)decodeCRC
 {
+  NSURL *url = nil;
+  
+  @autoreleasepool {
+  
   int bitmapWidth = (int) CGImageGetWidth(cgImage);
   int bitmapHeight = (int) CGImageGetHeight(cgImage);
   int bitmapNumPixels = bitmapWidth * bitmapHeight;
@@ -153,9 +157,6 @@
     *decodeCRC = crc;
   }
   
-  // FIXME: optimize by creating NSData with no copy flag, then write,
-  // then release bitmap context
-  
   // Release colorspace, context and bitmap information
   CGColorSpaceRelease(colorSpace);
   CGContextRelease(context);
@@ -168,7 +169,10 @@
     return nil;
   }
   
-  NSURL *url = [NSURL fileURLWithPath:tmpPath];
+  url = [NSURL fileURLWithPath:tmpPath];
+    
+  }
+  
   return url;
 }
 
