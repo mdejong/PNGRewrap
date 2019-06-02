@@ -23,7 +23,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		3CEA56F12298688400164F1C /* PNGRewrap */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PNGRewrap; sourceTree = BUILT_PRODUCTS_DIR; };
+		3CEA56F12298688400164F1C /* pngrewrap */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pngrewrap; sourceTree = BUILT_PRODUCTS_DIR; };
 		3CEA56F42298688400164F1C /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -49,7 +49,7 @@
 		3CEA56F22298688400164F1C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3CEA56F12298688400164F1C /* PNGRewrap */,
+				3CEA56F12298688400164F1C /* pngrewrap */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -79,7 +79,7 @@
 			);
 			name = PNGRewrap;
 			productName = PNGRewrap;
-			productReference = 3CEA56F12298688400164F1C /* PNGRewrap */;
+			productReference = 3CEA56F12298688400164F1C /* pngrewrap */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -241,7 +241,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 9F74CLHA49;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = pngrewrap;
 			};
 			name = Debug;
 		};
@@ -250,7 +250,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 9F74CLHA49;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = pngrewrap;
 			};
 			name = Release;
 		};
