@@ -47,7 +47,7 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/modejong/Development/PNGRewrap/Test"
+      customWorkingDirectory = "/Users/modejong/Development/AlphaOverVideo/Bloom/MEDIA"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
@@ -64,11 +64,11 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "one@3x.png2"
+            argument = "BloomOrange_1136_640_crf30.m4v"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "one@3x.png"
+            argument = "BloomOrange_1136_640.png"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

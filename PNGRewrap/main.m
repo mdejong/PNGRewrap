@@ -11,8 +11,6 @@
 
 #import <Foundation/Foundation.h>
 
-#import "NSDataExtensions.h"
-
 // PNG CRC example code
 
 /* Table computed with Mark Adler's makecrc.c utility.  */
@@ -83,11 +81,87 @@ crc32(uint32_t crc, unsigned char *buf, int len)
   return ~crc;
 }
 
-NSData* formatInt(uint32_t val) {
+// Calculate width and height of PNG image that will contain the binary
+// data chunk.
+
+void calcWidthAndHeight(int numBytes, int *widthPtr, int *heightPtr) {
+  const int widthMAX = 16384;
+  
+  if (numBytes <= widthMAX) {
+    *widthPtr = numBytes;
+    *heightPtr = 1;
+    return;
+  } else {
+    int n = numBytes / widthMAX;
+    if ((numBytes % widthMAX) != 0) {
+      n++;
+    }
+    
+    *widthPtr = widthMAX;
+    *heightPtr = n;
+    return;
+  }
+}
+
+// Write a binary data buffer into PNG context bytes and then
+// save the context data out to PNG
+
+NSData* renderDataAsPNG(NSData *inData, int bitmapWidth, int bitmapHeight)
+{
+  int len = (int) inData.length;
+  
+  int bitmapLength = bitmapWidth * bitmapHeight;
+
+  //CGRect imageRect = CGRectMake(0, 0, bitmapWidth, bitmapHeight);
+
+  // Grayscale color space
+  CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
+
+  // Create bitmap content with current image size and grayscale colorspace
+  CGContextRef context = CGBitmapContextCreate(nil, bitmapWidth, bitmapHeight, 8, bitmapWidth, colorSpace, kCGImageAlphaNone);
+  
+  assert(CGBitmapContextGetBytesPerRow(context) == bitmapWidth);
+
+  // Copy input data into context buffer
+  
+  uint8_t *contextPtr = (uint8_t *) CGBitmapContextGetData(context);
+  assert(contextPtr != NULL);
+  assert(len <= bitmapLength);
+  
+  memset(contextPtr, 0, bitmapLength);
+  memcpy(contextPtr, inData.bytes, len);
+  
+  // Create bitmap image info from pixel data in current context
+  CGImageRef imageRef = CGBitmapContextCreateImage(context);
+  
+  // Generate PNG from CGImageRef
+  
   NSMutableData *mData = [NSMutableData data];
-  uint32_t bigVal = htonl(val); // Write as big endian network byte order
-  [mData appendBytes:&bigVal length:sizeof(uint32_t)];
-  return mData;
+  
+  @autoreleasepool {
+    
+    // Render buffer as a PNG image
+    
+    CFStringRef type = kUTTypePNG;
+    size_t count = 1;
+    CGImageDestinationRef dataDest;
+    dataDest = CGImageDestinationCreateWithData((CFMutableDataRef)mData,
+                                                type,
+                                                count,
+                                                NULL);
+    assert(dataDest);
+    
+    //CGImageRef imgRef = [self createCGImageRef];
+    
+    CGImageDestinationAddImage(dataDest, imageRef, NULL);
+    CGImageDestinationFinalize(dataDest);
+    
+    CFRelease(dataDest);
+  }
+
+  CGImageRelease(imageRef);
+  
+  return [NSData dataWithData:mData];
 }
 
 int main(int argc, const char * argv[]) {
@@ -115,188 +189,21 @@ int main(int argc, const char * argv[]) {
       printf("input data file size is too large\n");
       exit(3);
     }
-    
-    // PNG Header
-    
-    // Hex   :   89  50  4e  47  0d  0a  1a   0a
-    // Ascii : \211   P   N   G  \r  \n  \032 \n
-    
-    NSMutableData *pngBytes = [NSMutableData data];
-    
-    {
-      uint8_t pngHeader[] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
-      [pngBytes appendBytes:pngHeader length:sizeof(pngHeader)];
-    }
-    
-    NSMutableData *chunkIHDR = [NSMutableData data];
-    
-    // IHDR
-    // 4 byte size of IHDR : 0x00 0x00 0x00 0x0d (13 bytes)
-    // 4 byte IHDR bytes : 0x49 0x48 0x44 0x52
-    
-    {
-      uint8_t pngHeader[] = { 0x00, 0x00, 0x00, 0x0d };
-      [pngBytes appendBytes:pngHeader length:sizeof(pngHeader)];
-    }
-    
-    // Note that CRC is computed so that chunk name is included
-    
-    {
-      uint8_t pngHeader[] = { 0x49, 0x48, 0x44, 0x52 };
-      [chunkIHDR appendBytes:pngHeader length:sizeof(pngHeader)];
-    }
-    
-    // IHDR chunk
-    // Image Width:        4 bytes
-    // Image Height:       4 bytes
-    // Bit depth:          1 byte
-    // Color type:         1 byte
-    // Compression method: 1 byte
-    // Filter method:      1 byte
-    // Interlace method:   1 byte
-    
-    {
-      uint32_t width = inBinDataNumBytes;
-      [chunkIHDR appendData:formatInt(width)];
-    }
-    
-    {
-      uint32_t height = 1;
-      [chunkIHDR appendData:formatInt(height)];
-    }
-    
-    {
-      uint8_t pngData[] = {
-        // Bit depth
-        0x08,
-        // Color type
-        0x00,
-        // Compression method
-        0x00,
-        // Filter method
-        0x00,
-        // Interlace method
-        0x00
-      };
-      [chunkIHDR appendBytes:pngData length:sizeof(pngData)];
-    }
-    
-    // 4 byte CRC checksum at end of chunk
-    
-    assert(chunkIHDR.length == (0x0d + 4));
-    
-    {
-      uint32_t crcVal = crc32(0, (unsigned char *)chunkIHDR.bytes, (int)chunkIHDR.length);
-      
-      [chunkIHDR appendData:formatInt(crcVal)];
-      
-      [pngBytes appendData:chunkIHDR];
-    }
-    
-    NSMutableData *chunkIDAT = [NSMutableData data];
-    
-    // IDAT - 4 byte size and then IDAT 0x49 0x44 0x41 0x54
-    
-    // Note that CRC is computed so that chunk name is included
-    
-    {
-      uint8_t pngHeader[] = { 0x49, 0x44, 0x41, 0x54 };
-      [chunkIDAT appendBytes:pngHeader length:sizeof(pngHeader)];
-    }
-    
-    NSMutableData *rowData = [NSMutableData data];
-    
-    {
-      uint8_t zeroByte = 0x0; // no filtering
-      [rowData appendBytes:&zeroByte length:1];
-    }
-    
-    [rowData appendData:inBinData];
 
-    // PNG row layout includes a row filter byte at that start of
-    // each row. This emitting layout uses only one row so emit
-    // a single zero values byte to indicate that no filtering
-    // is used.
-    
-    // zlib header : a pair of 4 bit values
-    
-    NSData *zlibCompressed = [rowData zlibDeflate];
-    
-    [chunkIDAT appendData:zlibCompressed];
-    
-    if ((0)) {
-      printf("zlibCompressed num bytes %d\n", (int)zlibCompressed.length);
-      
-      for ( int i = 0;  i < zlibCompressed.length; i++ ) {
-        uint8_t bVal = ((uint8_t*) zlibCompressed.bytes)[i];
-        printf("bVal [%3d] 0x%X = %d\n", i, bVal, bVal);
-      }
-    }
-
-    if ((0)) {
-      uint8_t bVal = ((uint8_t*) zlibCompressed.bytes)[0];
-      uint8_t low = bVal & 0x0F;
-      uint8_t high = (bVal >> 4) & 0x0F;
-      NSLog(@"bVal 0x%X = low %d high %d nibbles", bVal, low, high);
-    }
-    
-    // Write IDAT chunk size as 4 bytes, note that the chunk
-    // size is not available until after the compression
-    // phase is complete. Also note that the CRC checksum
-    // is not included in this size and that the 4 chunk
-    // bytes are not included in the length total.
-    
+    if ((1))
     {
-      uint32_t numBytes = (int) chunkIDAT.length - 4;
+      // Print CRC of input data
       
-      if ((chunkIDAT.length - 4) >= 0xFFFFFFFF) {
-        printf("compressed data size is too large for IDAT\n");
-        exit(3);
-      }
-      
-      [pngBytes appendData:formatInt(numBytes)];
+      uint32_t crcVal = crc32(0, (unsigned char *)inBinData.bytes, (int)inBinData.length);
+      printf("input CRC 0x%08X based on %d input bytes\n", crcVal, (int)inBinData.length);
     }
     
-    // 4 byte CRC checksum at end of chunk
+    int imageWidth, imageHeight;
     
-    {
-      uint32_t crcVal = crc32(0, (unsigned char *)chunkIDAT.bytes, (int)chunkIDAT.length);
-      
-      [chunkIDAT appendData:formatInt(crcVal)];
-    }
+    calcWidthAndHeight((int)inBinData.length, &imageWidth, &imageHeight);
     
-    [pngBytes appendData:chunkIDAT];
-
-    // IEND
+    NSData *pngBytes = renderDataAsPNG(inBinData, imageWidth, imageHeight);
     
-    NSMutableData *chunkIEND = [NSMutableData data];
-    
-    // End of IEND
-    // 4 byte size of IEND : 0x00 0x00 0x00 0x00
-    // 4 byte IEND bytes : 0x49 0x45 0x4e 0x44
-    
-    {
-      uint8_t pngHeader[] = { 0x00, 0x00, 0x00, 0x00 };
-      [pngBytes appendBytes:pngHeader length:sizeof(pngHeader)];
-    }
-    
-    // 4 byte CRC checksum at end of chunk
-    
-    {
-      uint8_t pngHeader[] = { 0x49, 0x45, 0x4e, 0x44 };
-      [chunkIEND appendBytes:pngHeader length:sizeof(pngHeader)];
-    }
-    
-    // 4 byte CRC checksum at end of chunk
-    
-    {
-      uint32_t crcVal = crc32(0, (unsigned char *)chunkIEND.bytes, (int)chunkIEND.length);
-      
-      [chunkIEND appendData:formatInt(crcVal)];
-      
-      [pngBytes appendData:chunkIEND];
-    }
-
     // Write contents of PNG buffer
     
     BOOL worked = [pngBytes writeToFile:outPNGFilename atomically:TRUE];
@@ -304,7 +211,7 @@ int main(int argc, const char * argv[]) {
       printf("write failed to \"%s\"\n", (char*)[outPNGFilename UTF8String]);
       exit(2);
     } else {
-      printf("wrote \"%s\" as %d bytes\n", (char*)[outPNGFilename UTF8String], (int) pngBytes.length);
+      printf("wrote \"%s\" (%d x %d) as %d bytes\n", (char*)[outPNGFilename UTF8String], imageWidth, imageHeight, (int) pngBytes.length);
     }
   }
   return 0;
