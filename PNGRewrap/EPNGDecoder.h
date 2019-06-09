@@ -4,8 +4,13 @@
 //  Created by Mo DeJong on 6/1/19.
 //  See LICENSE for license terms.
 //
+//  Util class that implements decoding a data buffer from an embedded PNG
+//  format. An iOS client rewraps a binary file as a PNG and then decodes
+//  after pullint the image data from the asset catalog to take advantage
+//  of app slicing to reduce downloaded app sizes.
 
 #import <Foundation/Foundation.h>
+#import <QuartzCore/QuartzCore.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -19,8 +24,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (NSURL*) saveEmbeddedAssetToTmpDir:(CGImageRef)cgImage
                           pathPrefix:(NSString*)pathPrefix
-                              tmpDir:(NSString*)tmpDir
-                           decodeCRC:(int*)decodeCRC;
+                              tmpDir:(NSString* _Nullable)tmpDir
+                           decodeCRC:(int* _Nullable)decodeCRC;
 
 @end
 

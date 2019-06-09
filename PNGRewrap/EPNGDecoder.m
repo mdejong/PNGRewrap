@@ -52,14 +52,25 @@
   // Create bitmap content with current image size and grayscale colorspace
   CGContextRef context = CGBitmapContextCreate(NULL, bitmapWidth, bitmapHeight, bitsPerComponent, bytesPerRow, colorSpace, bitmapInfo);
   
-  // Draw image into current context, with specified rectangle
-  // using previously defined context (with grayscale colorspace)
+  // Draw image into current context, with specified rectangle using context and colorspace.
   CGContextDrawImage(context, imageRect, cgImage);
   
   uint32_t *contextPtr = (uint32_t *) CGBitmapContextGetData(context);
   assert(contextPtr != NULL);
   
   assert(CGBitmapContextGetBytesPerRow(context) == bytesPerRow);
+    
+    if ((0)) {
+      uint32_t *pixelsPtr = (uint32_t *) contextPtr;
+      
+      for (int y = 0; y < bitmapHeight; y++) {
+        for (int x = 0; x < bitmapWidth; x++) {
+          uint32_t pixel = pixelsPtr[(y * bitmapWidth) + x];
+          fprintf(stdout, "0x%08X ", pixel);
+        }
+        fprintf(stdout, "\n");
+      }
+    }
   
   // Walk backwards from the end of the buffer until a non-zero value is found.
   // Note that the alpha channel is ignored , only BGR components are considered.
@@ -158,7 +169,7 @@
   }
   
   // Release colorspace, context and bitmap information
-  CGColorSpaceRelease(colorSpace);
+  //CGColorSpaceRelease(colorSpace);
   CGContextRelease(context);
   
   NSString *tmpPath = [self getUniqueTmpDirPath:pathPrefix tmpDir:tmpDir];

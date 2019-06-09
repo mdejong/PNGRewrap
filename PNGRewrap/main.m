@@ -69,6 +69,14 @@ NSData* renderDataAsPNG(NSData *inData, int bitmapWidth, int bitmapHeight)
   
   CGFrameBuffer *fb = [CGFrameBuffer cGFrameBufferWithBppDimensions:24 width:bitmapWidth height:bitmapHeight];
   
+  // Explicitly mark colorspace as sRGB
+  
+//  CGColorSpaceRef colorSpace = NULL;
+//  colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+//  assert(colorSpace);
+//  fb.colorspace = colorSpace;
+//  CGColorSpaceRelease(colorSpace);
+  
   // Each 24 bit RGB pixel will contain 3 bytes, so break input up into triples and zero fill.
   
   int numPixels = byteLen / 3;
@@ -108,6 +116,18 @@ NSData* renderDataAsPNG(NSData *inData, int bitmapWidth, int bitmapHeight)
     uint32_t G = *inBytePtr++;
     uint32_t pixel = (G << 8) | (B);
     *outPixelPtr++ = pixel;
+  }
+  
+  if ((0)) {
+    outPixelPtr = (uint32_t *) fb.pixels;
+    
+    for (int y = 0; y < bitmapHeight; y++) {
+      for (int x = 0; x < bitmapWidth; x++) {
+        uint32_t pixel = outPixelPtr[(y * bitmapWidth) + x];
+        fprintf(stdout, "0x%08X ", pixel);
+      }
+      fprintf(stdout, "\n");
+    }
   }
   
   // FIXME: trailing size as 16 bit value to indicate num zeros?
@@ -176,7 +196,7 @@ int main(int argc, const char * argv[]) {
     printf("input  CRC 0x%08X based on %d input bytes\n", inputCRC, (int)inBinData.length);
     }
     
-    if (0) {
+    if ((0)) {
       uint8_t *pixelsPtr = (uint8_t *) inBinData.bytes;
       int numPixels = (int) inBinData.length;
       
@@ -189,6 +209,26 @@ int main(int argc, const char * argv[]) {
     int imageWidth, imageHeight;
     
     calcWidthAndHeight((int)inBinData.length, &imageWidth, &imageHeight);
+    
+    if ((0)) {
+      imageWidth = 4;
+      imageHeight = 4;
+      
+      uint8_t inBuffer[] = {
+        0, 1, 2, 3,
+        4, 5, 6, 7,
+        8, 9, 10, 11,
+        12, 13, 14, 15
+      };
+      
+      inBinData = [NSData dataWithBytes:inBuffer length:16];
+      
+      inputCRC = (uint32_t) crc32(0L, (unsigned char *)inBinData.bytes, (int)inBinData.length);
+      
+      if (1) {
+        printf("input  CRC 0x%08X based on %d input bytes\n", inputCRC, (int)inBinData.length);
+      }
+    }
     
     NSData *pngBytes = renderDataAsPNG(inBinData, imageWidth, imageHeight);
     
