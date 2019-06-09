@@ -11,46 +11,27 @@
 
 #import <Foundation/Foundation.h>
 
-#import "CGFrameBuffer.h"
-
 #import "EPNGDecoder.h"
 
 #import <zlib.h>
 
-// Calculate width and height of PNG image that will contain the binary
-// data chunk.
+// Calculate width and height of PNG image, this size was determined from
+// the IDAT chunk size that xcode optimized PNG files seem to emit.
 
 void calcWidthAndHeight(int numBytes, int *widthPtr, int *heightPtr) {
   const int widthMAX = 16384;
-  int widthMAXPixels = (widthMAX / 3);
-  if ((widthMAX % 3) > 0) {
-    widthMAXPixels++;
-  }
   
-  int numPixelsNeeded = numBytes / 3;
-  if ((numBytes % 3) != 0) {
-    numPixelsNeeded++;
-  }
-  
-  if ((numPixelsNeeded % 2) != 0) {
-    // Width is always an even number of pixels
-    numPixelsNeeded++;
-  }
-  
-  // FIXME: output should group sets of 3 bytes into 24 BPP pixels, so the
-  // width of the output should handle 3x more?
-  
-  if (numBytes <= widthMAXPixels) {
-    *widthPtr = numPixelsNeeded;
+  if (numBytes <= widthMAX) {
+    *widthPtr = numBytes;
     *heightPtr = 1;
     return;
   } else {
-    int n = numPixelsNeeded / widthMAXPixels;
-    if ((numPixelsNeeded % widthMAXPixels) != 0) {
+    int n = numBytes / widthMAX;
+    if ((numBytes % widthMAX) != 0) {
       n++;
     }
     
-    *widthPtr = widthMAXPixels;
+    *widthPtr = widthMAX;
     *heightPtr = n;
     return;
   }
@@ -61,79 +42,41 @@ void calcWidthAndHeight(int numBytes, int *widthPtr, int *heightPtr) {
 
 NSData* renderDataAsPNG(NSData *inData, int bitmapWidth, int bitmapHeight)
 {
-  int byteLen = (int) inData.length;
+  int len = (int) inData.length;
   
-  int bitmapLength = (int) (bitmapWidth * bitmapHeight);
+  int bitmapLength = bitmapWidth * bitmapHeight;
   
-  //assert(bitmapLength >= byteLen);
+  // Grayscale color space
+  CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
   
-  CGFrameBuffer *fb = [CGFrameBuffer cGFrameBufferWithBppDimensions:24 width:bitmapWidth height:bitmapHeight];
+  // Create bitmap content with current image size and grayscale colorspace
+  CGContextRef context = CGBitmapContextCreate(nil, bitmapWidth, bitmapHeight, 8, bitmapWidth, colorSpace, kCGImageAlphaNone);
   
-  // Explicitly mark colorspace as sRGB
+  assert(CGBitmapContextGetBytesPerRow(context) == bitmapWidth);
   
-//  CGColorSpaceRef colorSpace = NULL;
-//  colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-//  assert(colorSpace);
-//  fb.colorspace = colorSpace;
-//  CGColorSpaceRelease(colorSpace);
+  // Copy input data into context buffer
   
-  // Each 24 bit RGB pixel will contain 3 bytes, so break input up into triples and zero fill.
+  uint8_t *contextPtr = (uint8_t *) CGBitmapContextGetData(context);
+  assert(contextPtr != NULL);
+  assert(len <= bitmapLength);
   
-  int numPixels = byteLen / 3;
-  int numBytesOver = (byteLen % 3);
-  
-  int totalNumPixels = numPixels;
-  if (numBytesOver > 0) {
-    totalNumPixels += 1;
-  }
-  if ((totalNumPixels % 2) != 0) {
-    totalNumPixels += 1;
-  }
-  //assert(totalNumPixels == bitmapLength);
-  assert(totalNumPixels <= bitmapLength);
-  
-  uint8_t *inBytePtr = (uint8_t *) inData.bytes;
-  uint32_t *outPixelPtr = (uint32_t *) fb.pixels;
-  
-  for (int i = 0; i < numPixels; i++) {
-    uint32_t B = *inBytePtr++;
-    uint32_t G = *inBytePtr++;
-    uint32_t R = *inBytePtr++;
-    
-    uint32_t pixel = (R << 16) | (G << 8) | (B);
-    
-    *outPixelPtr++ = pixel;
-  }
-  
-  // Emit 1 or 2 more bytes (zero padded)
-  
-  if (numBytesOver == 1) {
-    uint32_t B = *inBytePtr++;
-    uint32_t pixel = B;
-    *outPixelPtr++ = pixel;
-  } else if (numBytesOver == 2) {
-    uint32_t B = *inBytePtr++;
-    uint32_t G = *inBytePtr++;
-    uint32_t pixel = (G << 8) | (B);
-    *outPixelPtr++ = pixel;
-  }
+  memset(contextPtr, 0, bitmapLength);
+  memcpy(contextPtr, inData.bytes, len);
   
   if ((0)) {
-    outPixelPtr = (uint32_t *) fb.pixels;
+    uint8_t *outPixelPtr = contextPtr;
     
     for (int y = 0; y < bitmapHeight; y++) {
       for (int x = 0; x < bitmapWidth; x++) {
-        uint32_t pixel = outPixelPtr[(y * bitmapWidth) + x];
-        fprintf(stdout, "0x%08X ", pixel);
+        uint8_t pixel = outPixelPtr[(y * bitmapWidth) + x];
+        fprintf(stdout, "0x%02X ", pixel);
       }
       fprintf(stdout, "\n");
     }
   }
   
-  // FIXME: trailing size as 16 bit value to indicate num zeros?
-  
   // Create bitmap image info from pixel data in current context
-  CGImageRef imageRef = [fb createCGImageRef];
+  CGImageRef imageRef = CGBitmapContextCreateImage(context);
   
   // Generate PNG from CGImageRef
   
@@ -152,12 +95,14 @@ NSData* renderDataAsPNG(NSData *inData, int bitmapWidth, int bitmapHeight)
                                                 NULL);
     assert(dataDest);
     
+    //CGImageRef imgRef = [self createCGImageRef];
+    
     CGImageDestinationAddImage(dataDest, imageRef, NULL);
     CGImageDestinationFinalize(dataDest);
     
     CFRelease(dataDest);
   }
-
+  
   CGImageRelease(imageRef);
   
   return [NSData dataWithData:mData];
@@ -167,7 +112,7 @@ int main(int argc, const char * argv[]) {
   @autoreleasepool {
     if (argc != 3) {
       printf("pngrewrap infile output.png\n");
-      printf("wrap the contents of infile as IDAT chunk and write as output.png\n");
+      printf("wrap the raw bytes of infile as IDAT chunk(s) and write as output.png\n");
       exit(1);
     }
     
@@ -182,7 +127,8 @@ int main(int argc, const char * argv[]) {
       exit(2);
     }
     
-    // A really really large file cannot be represented by a 4 byte size value
+    // A really really large file cannot be represented by a 4 byte size value, this logic
+    // now emits multiple IDAT chunks but some upper limit cannot hurt.
     
     if ((inBinData.length+1) >= 0xFFFFFFFF) {
       printf("input data file size is too large\n");

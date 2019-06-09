@@ -64,11 +64,11 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "BloomOrange_2048_1536_crf30.m4v"
+            argument = "BloomOrange_1136_640_crf30.m4v"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "BloomOrange_2048_1536.png"
+            argument = "BloomOrange_1136_640.png"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

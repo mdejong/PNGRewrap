@@ -43,118 +43,62 @@
   CGColorSpaceRef colorSpace = CGImageGetColorSpace(cgImage);
   
   int bitsPerComponent = 8;
-  int numComponents = 4;
+  int numComponents = 1;
   int bitsPerPixel = bitsPerComponent * numComponents;
   int bytesPerRow = (int) (bitmapWidth * (bitsPerPixel / 8));
   
-  CGBitmapInfo bitmapInfo = kCGBitmapByteOrder32Host | kCGImageAlphaNoneSkipFirst;
+  CGBitmapInfo bitmapInfo = (CGBitmapInfo) kCGImageAlphaNone;
   
   // Create bitmap content with current image size and grayscale colorspace
   CGContextRef context = CGBitmapContextCreate(NULL, bitmapWidth, bitmapHeight, bitsPerComponent, bytesPerRow, colorSpace, bitmapInfo);
+  if (context == NULL) {
+    return nil;
+  }
   
   // Draw image into current context, with specified rectangle using context and colorspace.
   CGContextDrawImage(context, imageRect, cgImage);
   
-  uint32_t *contextPtr = (uint32_t *) CGBitmapContextGetData(context);
-  assert(contextPtr != NULL);
+  uint8_t *contextPtr = (uint8_t *) CGBitmapContextGetData(context);
+    if (contextPtr == NULL) {
+      return nil;
+    }
   
   assert(CGBitmapContextGetBytesPerRow(context) == bytesPerRow);
     
     if ((0)) {
-      uint32_t *pixelsPtr = (uint32_t *) contextPtr;
+      uint8_t *pixelsPtr = (uint8_t *) contextPtr;
       
       for (int y = 0; y < bitmapHeight; y++) {
         for (int x = 0; x < bitmapWidth; x++) {
-          uint32_t pixel = pixelsPtr[(y * bitmapWidth) + x];
-          fprintf(stdout, "0x%08X ", pixel);
+          uint8_t pixel = pixelsPtr[(y * bitmapWidth) + x];
+          fprintf(stdout, "0x%02X ", pixel);
         }
         fprintf(stdout, "\n");
       }
     }
   
-  // Walk backwards from the end of the buffer until a non-zero value is found.
-  // Note that the alpha channel is ignored , only BGR components are considered.
-  
-  uint32_t *endPtr = contextPtr + bitmapNumPixels - 1;
-  
-  while (endPtr != contextPtr) {
-    uint32_t pixel = *endPtr;
-    //printf("0x%08X\n", pixel);
-    pixel &= 0x00FFFFFF;
-    if (pixel != 0) {
-      // Break out when a non-zero pixel value has been located
-      break;
+    // Walk backwards from the end of the buffer until a non-zero value is found.
+    
+    uint8_t *endPtr = contextPtr + bitmapNumPixels - 1;
+    
+    while ((endPtr != contextPtr) && (*endPtr == 0)) {
+      endPtr--;
     }
-    endPtr--;
-  }
-  
-  // FIXME: zero walk back should be in terms of byte values embedded
-  // inside the pixels. Might need some special marker at the end
-  // of the file to indicate the actual length of the data buffer in
-  // bytes, so that when data is initially parsed, the output can be
-  // cropped to the proper byte length considering overflow!
-
-  int bufferNumPixels = (int) (endPtr - contextPtr + 1);
-  int bufferNumBytes = (int) (bufferNumPixels * 3);
-  
-  // Collect sets of 3 bytes and append to data a byte at a time
-  
-  NSMutableData *rawBytes = [NSMutableData dataWithLength:bufferNumBytes];
-  
-  {
-    uint32_t *pixelsPtr = (uint32_t *) contextPtr;
-    int numPixels = (int) bufferNumPixels;
     
-    uint8_t *outBytesPtr = (uint8_t *) rawBytes.bytes;
+    int bufferLength = (int) (endPtr - contextPtr + 1);
     
-    for (int i = 0; i < numPixels; i++) {
-      uint32_t pixel = pixelsPtr[i];
+    NSData *rawBytes = [NSData dataWithBytes:contextPtr length:bufferLength];
+    
+    if ((0)) {
+      uint8_t *pixelsPtr = (uint8_t *) rawBytes.bytes;
+      int numPixels = (int) rawBytes.length;
       
-      uint32_t B = pixel & 0xFF;
-      uint32_t G = (pixel >> 8) & 0xFF;
-      uint32_t R = (pixel >> 16) & 0xFF;
+      printf("zeros trimmed buffer contains %d bytes\n", numPixels);
       
-      *outBytesPtr++ = B;
-      *outBytesPtr++ = G;
-      *outBytesPtr++ = R;
+      for (int i = 0; i < rawBytes.length; i++) {
+        printf("bufffer[%d] = 0x%02X\n", i, pixelsPtr[i]);
+      }
     }
-    
-    // Trim zero bytes off the end
-    
-    outBytesPtr = (uint8_t *) rawBytes.bytes;
-    
-    int lastOff = (int)rawBytes.length - 1;
-    int lastOff2 = (int)rawBytes.length - 2;
-    
-    int vEnd = outBytesPtr[lastOff];
-    int vEndM1 = outBytesPtr[lastOff2];
-    
-    int trim = 0;
-    
-    if (vEnd == 0) {
-      trim++;
-    }
-    
-    if (vEndM1 == 0) {
-      trim++;
-    }
-    
-    if (trim > 0) {
-      [rawBytes setLength:(rawBytes.length - trim)];
-    }
-  }
-  
-  if ((0)) {
-    uint8_t *pixelsPtr = (uint8_t *) rawBytes.bytes;
-    int numPixels = (int) rawBytes.length;
-    
-    printf("buffer contains %d bytes\n", numPixels);
-    
-    for (int i = 0; i < numPixels; i++) {
-      uint8_t pixel = pixelsPtr[i];
-      printf("buffer[%d] = 0x%02X\n", i, pixel);
-    }
-  }
   
   // Signature of decoded PNG data (optional)
   
